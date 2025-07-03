@@ -1,0 +1,10 @@
+{
+  "name": "My Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "settings": {},
+  "extensions": [],
+  "postCreateCommand": ""
+}
