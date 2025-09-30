@@ -1,79 +1,97 @@
+# streamlit_app.py
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
 
-# -------------------------------
-# Load model and encoders
-# -------------------------------
-model = joblib.load("/workspaces/ML_01_video_game_prediction/video_game_analysis/notebooks/FC110557_Siyas/xgboost_model.pkl")
-encoders = joblib.load("/workspaces/ML_01_video_game_prediction/video_game_analysis/notebooks/FC110557_Siyas/encoded.fil")
 
-st.set_page_config(page_title="Video Game Sales Predictor", page_icon="🎮", layout="centered")
-
-st.title("🎮 Video Game Sales Prediction App")
-st.write("Enter game details below to predict **Global Sales (in millions)**.")
-
-# -------------------------------
-# Input Widgets
-# -------------------------------
-genre = st.selectbox("Select Genre", encoders["Genre"].classes_)
-platform = st.selectbox("Select Platform", encoders["Platform"].classes_)
-publisher = st.selectbox("Select Publisher", encoders["Publisher"].classes_)
+#Load Model, Encoders, and Dataset
+xgb_model = joblib.load("/workspaces/ML_01_video_game_prediction/video_game_analysis/notebooks/FC110557_Siyas/xgb_final_model.pkl")
+encoders = joblib.load("/workspaces/ML_01_video_game_prediction/video_game_analysis/notebooks/FC110557_Siyas/encoders.pkl")
+train_df = pd.read_csv("/workspaces/ML_01_video_game_prediction/video_game_analysis/notebooks/FC110557_Siyas/vgsales_cleaned.csv")
 
 
-year = st.slider("Year of Release", 1980, 2025, 2010)
-critic_score = st.slider("Critic Score", 0, 100, 70)
-user_score = st.slider("User Score", 0, 10, 7)
+# App Title
+
+st.title("🎮 Video Game Global Sales Predictor")
+st.write("Predict global sales (in millions) for a video game based on its features.")
 
 # -------------------------------
-# Encode Categorical Inputs
-# -------------------------------
-# Handle unseen values by mapping to "Unknown"
-def safe_encode(encoder, value):
-    if value in encoder.classes_:
-        return encoder.transform([value])[0]
-    else:
-        return encoder.transform(["Unknown"])[0]
+# Input Form
+with st.form("prediction_form"):
+    st.subheader("Categorical Features")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        publisher = st.selectbox("Publisher", options=train_df['Publisher'].dropna().unique())
+        developer = st.selectbox("Developer", options=train_df['Developer'].dropna().unique())
+    with col2:
+        genre = st.selectbox("Genre", options=train_df['Genre'].dropna().unique())
+        platform = st.selectbox("Platform", options=train_df['Platform'].dropna().unique())
+    with col3:
+        rating = st.selectbox("Rating", options=train_df['Rating'].dropna().unique())
+        decade = st.selectbox("Decade", options=train_df['Decade'].dropna().unique())
 
-encoded_genre = safe_encode(encoders["Genre"], genre)
-encoded_platform = safe_encode(encoders["Platform"], platform)
-encoded_publisher = safe_encode(encoders["Publisher"], publisher)
+    # Franchise Input
+    franchises = ["Mario", "Pokémon", "Pokemon", "Zelda", "Call of Duty",
+                  "GTA", "Grand Theft Auto", "FIFA", "Final Fantasy", "Madden", "Wii Sports", "Other"]
+    selected_franchise = st.selectbox("Franchise", options=franchises)
 
-na_sales = 0.0
-eu_sales = 0.0
-jp_sales = 0.0
-other_sales = 0.0
-critic_count = 0
-user_count = 0
-rating = "Unknown"  # will be encoded
-total_rating = (critic_score + user_score) / 2
+    st.subheader("Numerical Features")
+    col1, col2 = st.columns(2)
+    with col1:
+        critic_score = st.slider("Critic Score (0-100)", min_value=0, max_value=100, step=1)
+        user_score = st.slider("User Score (0-10)", min_value=0.0, max_value=10.0, step=0.1)
+    with col2:
+        critic_count = st.number_input("Critic Count", min_value=0, step=1)
+        user_count = st.number_input("User Count", min_value=0, step=1)
 
-encoded_rating = safe_encode(encoders["Rating"], rating)
+    # Columns for button and result
+    col_button, col_result = st.columns([1, 2])
+    result_placeholder = col_result.empty()
 
-# -------------------------------
-# Create Input DataFrame
-# -------------------------------
-input_data = pd.DataFrame({
-    "Platform": [encoded_platform],
-    "Year_of_Release": [year],
-    "Genre": [encoded_genre],
-    "Publisher": [encoded_publisher],
-    "NA_Sales": [na_sales],
-    "EU_Sales": [eu_sales],
-    "JP_Sales": [jp_sales],
-    "Other_Sales": [other_sales],
-    "Critic_Score": [critic_score],
-    "Critic_Count": [critic_count],
-    "User_Score": [user_score],
-    "User_Count": [user_count],
-    "Rating": [encoded_rating],
-    "Total_Rating": [total_rating]
-})
+    # Large submit button
+    submitted = col_button.form_submit_button("Predict Global Sales")
 
 
-# -------------------------------
-# Prediction
-# -------------------------------
-if st.button("Predict Sales"):
-    prediction = model.predict(input_data)[0]
-    st.success(f"💰 Predicted Global Sales: **{prediction:.2f} million copies**")
+# Prediction Logic
+
+if submitted:
+    try:
+        # Encode categorical features
+        publisher_enc = encoders["Publisher"].transform([publisher])[0]
+        developer_enc = encoders["Developer"].transform([developer])[0]
+        if selected_franchise not in encoders["Franchise"].classes_:
+            selected_franchise = "Other"
+        franchise_enc = encoders["Franchise"].transform([selected_franchise])[0]
+    except:
+        st.error("Selected category not found in encoder. Please select a valid option.")
+        st.stop()
+
+    # Prepare input DataFrame
+    input_df = pd.DataFrame({
+        "Publisher": [publisher_enc],
+        "Developer": [developer_enc],
+        "Franchise": [franchise_enc],
+        "Critic_Score": [critic_score],
+        "Critic_Count": [critic_count],
+        "User_Score": [user_score],
+        "User_Count": [user_count],
+        **{f"Genre_{g}": [1 if genre == g else 0] for g in train_df['Genre'].dropna().unique()},
+        **{f"Platform_{p}": [1 if platform == p else 0] for p in train_df['Platform'].dropna().unique()},
+        **{f"Rating_{r}": [1 if rating == r else 0] for r in train_df['Rating'].dropna().unique()},
+        **{f"Decade_{d}": [1 if decade == d else 0] for d in train_df['Decade'].dropna().unique()},
+    })
+
+    # Align with model features
+    train_cols = xgb_model.get_booster().feature_names
+    for col in train_cols:
+        if col not in input_df.columns:
+            input_df[col] = 0
+    input_df = input_df[train_cols]
+
+    # Make prediction
+    pred_log = xgb_model.predict(input_df)
+    pred_sales = np.expm1(pred_log)[0]
+
+    # Display result in the second column
+    result_placeholder.success(f"Predicted Global Sales: **{pred_sales:.2f} million units**")
