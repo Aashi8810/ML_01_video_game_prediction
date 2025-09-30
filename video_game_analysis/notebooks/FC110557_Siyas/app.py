@@ -4,20 +4,22 @@ import pandas as pd
 import numpy as np
 import joblib
 
-
-#Load Model, Encoders, and Dataset
+# -------------------------------
+# 1. Load Model, Encoders, and Dataset
+# -------------------------------
 xgb_model = joblib.load("/workspaces/ML_01_video_game_prediction/video_game_analysis/notebooks/FC110557_Siyas/xgb_final_model.pkl")
 encoders = joblib.load("/workspaces/ML_01_video_game_prediction/video_game_analysis/notebooks/FC110557_Siyas/encoders.pkl")
 train_df = pd.read_csv("/workspaces/ML_01_video_game_prediction/video_game_analysis/notebooks/FC110557_Siyas/vgsales_cleaned.csv")
 
-
-# App Title
-
+# -------------------------------
+# 2. App Title
+# -------------------------------
 st.title("🎮 Video Game Global Sales Predictor")
 st.write("Predict global sales (in millions) for a video game based on its features.")
 
 # -------------------------------
-# Input Form
+# 3. Input Form
+# -------------------------------
 with st.form("prediction_form"):
     st.subheader("Categorical Features")
     col1, col2, col3 = st.columns(3)
@@ -29,7 +31,20 @@ with st.form("prediction_form"):
         platform = st.selectbox("Platform", options=train_df['Platform'].dropna().unique())
     with col3:
         rating = st.selectbox("Rating", options=train_df['Rating'].dropna().unique())
-        decade = st.selectbox("Decade", options=train_df['Decade'].dropna().unique())
+        # Year input instead of decade
+        year_of_release = st.number_input("Year of Release", min_value=int(train_df['Year_of_Release'].min()), 
+                                          max_value=int(train_df['Year_of_Release'].max()), 
+                                          step=1, value=2010)
+
+    # Convert year to decade
+    if year_of_release < 1990:
+        decade = "1980s"
+    elif year_of_release < 2000:
+        decade = "1990s"
+    elif year_of_release < 2010:
+        decade = "2000s"
+    else:
+        decade = "2010s"
 
     # Franchise Input
     franchises = ["Mario", "Pokémon", "Pokemon", "Zelda", "Call of Duty",
@@ -52,9 +67,9 @@ with st.form("prediction_form"):
     # Large submit button
     submitted = col_button.form_submit_button("Predict Global Sales")
 
-
-# Prediction Logic
-
+# -------------------------------
+# 4. Prediction Logic
+# -------------------------------
 if submitted:
     try:
         # Encode categorical features
