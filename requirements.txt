@@ -11,3 +11,5 @@ matplotlib
 seaborn
 jupyterlab
 ipykernel
+streamlit
+joblib
