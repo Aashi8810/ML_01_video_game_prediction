@@ -47,8 +47,16 @@ with st.form("prediction_form"):
         decade = "2010s"
 
     # Franchise Input
-    franchises = ["Mario", "Pokémon", "Pokemon", "Zelda", "Call of Duty",
-                  "GTA", "Grand Theft Auto", "FIFA", "Final Fantasy", "Madden", "Wii Sports", "Other"]
+    franchises = ["Super Mario Bros.",
+    "Call of Duty",
+    "Grand Theft Auto",
+    "Wii Sports",
+    "Need for Speed",
+    "The Legend of Zelda",
+    "Medal of Honor",
+    "Metal Gear",
+    "The Elder Scrolls",
+    "LEGO Star Wars"]
     selected_franchise = st.selectbox("Franchise", options=franchises)
 
     st.subheader("Numerical Features")
