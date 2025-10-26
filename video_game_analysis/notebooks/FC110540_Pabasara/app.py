@@ -40,7 +40,7 @@ with st.form(key="game_form"):
     
     submit = st.form_submit_button(label="Predict global sales.")
 
-# -------------------- HELPER FUNCTION --------------------
+
 def encode_value(encoder, value):
     """Encode categorical values safely; return -1 if unseen."""
     if value in encoder.classes_:
@@ -48,7 +48,7 @@ def encode_value(encoder, value):
     else:
         return -1
 
-st.markdown("<br>", unsafe_allow_html=True)  # spacing
+st.markdown("<br>", unsafe_allow_html=True)
 
 if submit:
     # Encode categorical features
@@ -58,7 +58,7 @@ if submit:
     encoded_developer = encode_value(encoders["Developer"], developer)
     encoded_rating = encode_value(encoders["Rating"], rating)
 
-    # Create input DataFrame (match training columns)
+    # Create input DataFrame
     input_data = pd.DataFrame({
         "Platform": [encoded_platform],
         "Year_of_Release": [year],
@@ -77,15 +77,6 @@ if submit:
     input_data["Critic_User_Score_Ratio"] = input_data["Critic_Score"] / (input_data["User_Score"] + 1e-5)
     input_data["Total_Review_Count"] = input_data["Critic_Count"] + input_data["User_Count"]
 
-    # # Optional: Ensure correct feature order
-    # feature_order = [
-    #     "Platform", "Year_of_Release", "Genre", "Publisher", "Critic_Score",
-    #     "Critic_Count", "User_Score", "User_Count", "Developer", "Rating",
-    #     "Years_Since_Release", "Critic_User_Score_Ratio", "Total_Review_Count"
-    # ]
-    # input_data = input_data[feature_order]
-
-    # Make prediction
     prediction = model.predict(input_data)[0]
 
     st.markdown(
